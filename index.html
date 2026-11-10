@@ -39,7 +39,10 @@
   header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
   main { width: 100%; max-width: 560px; padding: 12px 20px 32px; flex: 1; }
   .screen { display: none; }
-  .screen.active { display: block; }
+  .screen.active { display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-4px); } }
 
   /* ---- set picker ---- */
   .sets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -52,6 +55,7 @@
     cursor: pointer;
     font: inherit;
     transition: border-color .15s, transform .1s;
+    animation: fadeIn .35s ease both;
   }
   .set-card:active { transform: scale(0.98); }
   .set-card:hover { border-color: var(--ink); }
@@ -85,6 +89,7 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 36px 20px 28px; text-align: center; margin-bottom: 16px;
   }
+  .clue-card.q-in { animation: fadeIn .3s ease; }
   .clue-card .clue { font-size: 44px; font-weight: 700; line-height: 1.2; }
   .clue-card .roman { color: var(--muted); font-size: 17px; margin-top: 8px; font-style: italic; }
   .clue-card .prompt { color: var(--muted); font-size: 13px; margin-top: 18px; }
@@ -97,8 +102,9 @@
   }
   .opt:hover:not(:disabled) { border-color: var(--ink); }
   .opt:disabled { cursor: default; opacity: .85; }
-  .opt.correct { background: var(--green-bg); border-color: var(--green); color: var(--green); font-weight: 700; }
-  .opt.wrong { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .opt.correct { background: var(--green-bg); border-color: var(--green); color: var(--green); font-weight: 700; animation: pulse .45s ease; }
+  .opt.wrong { background: var(--red-bg); border-color: var(--red); color: var(--red); animation: shake .4s ease; }
+  #hud-score.pop { display: inline-block; animation: pop .35s ease; }
   .quit {
     display: block; margin: 18px auto 0; background: none; border: none;
     font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; text-decoration: underline;
@@ -280,9 +286,10 @@ function renderSets() {
     box.appendChild(label);
     var grid = document.createElement("div");
     grid.className = "sets";
-    list.forEach(function (s) {
+    list.forEach(function (s, i) {
       var b = document.createElement("button");
       b.className = "set-card";
+      b.style.animationDelay = (i * 30) + "ms";
       b.innerHTML = "<h2></h2><p></p><span class='count'></span> <span class='diff'></span>";
       b.querySelector("h2").textContent = s.SetName;
       b.querySelector("p").textContent = s.descrip || "Word set";
@@ -336,6 +343,8 @@ function startRound(setObj) {
 function renderQuestion() {
   locked = false;
   var card = round[qIndex];
+  var cc = document.querySelector(".clue-card");
+  cc.classList.remove("q-in"); void cc.offsetWidth; cc.classList.add("q-in");
   document.getElementById("hud-q").textContent = "Question " + (qIndex + 1) + " of " + round.length;
   document.getElementById("hud-score").textContent = score;
   document.getElementById("hud-streak").textContent = streak;
@@ -364,6 +373,8 @@ function answer(btn, ans, card) {
   if (correct) {
     score++; streak++;
     if (streak > bestStreak) bestStreak = streak;
+    var hs = document.getElementById("hud-score");
+    hs.classList.remove("pop"); void hs.offsetWidth; hs.classList.add("pop");
   } else {
     btn.classList.add("wrong");
     streak = 0;
