@@ -15,7 +15,8 @@
     --green-bg: #dcfce7;
     --red: #b91c1c;
     --red-bg: #fee2e2;
-    --accent: #111827;
+    --accent: #ff4d00;
+    --amber: #d97706;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -35,7 +36,7 @@
     text-align: center;
   }
   header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
-  header h1 span { font-weight: 400; color: var(--muted); }
+  header h1 span { font-weight: 400; color: var(--accent); }
   header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
   main { width: 100%; max-width: 560px; padding: 12px 20px 32px; flex: 1; }
   .screen { display: none; }
@@ -57,6 +58,9 @@
     transition: border-color .15s, transform .1s;
     animation: fadeIn .35s ease both;
   }
+  .set-card.tier-easy { border-left: 4px solid var(--green); }
+  .set-card.tier-medium { border-left: 4px solid var(--amber); }
+  .set-card.tier-hard { border-left: 4px solid var(--red); }
   .set-card:active { transform: scale(0.98); }
   .set-card:hover { border-color: var(--ink); }
   .set-card h2 { font-size: 16px; font-weight: 700; }
@@ -76,6 +80,9 @@
   .set-card .diff.medium { color: #92400e; background: #fef3c7; }
   .set-card .diff.hard { color: var(--red); background: var(--red-bg); }
   .section-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 8px 2px 12px; }
+  .section-label.easy { color: var(--green); }
+  .section-label.medium { color: var(--amber); }
+  .section-label.hard { color: var(--red); }
 
   /* ---- quiz ---- */
   .hud {
@@ -84,7 +91,7 @@
   }
   .hud .streak { color: var(--muted); font-weight: 500; }
   .progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 20px; }
-  .progress > div { height: 100%; background: var(--ink); width: 0%; transition: width .3s; }
+  .progress > div { height: 100%; background: var(--accent); width: 0%; transition: width .3s; }
   .clue-card {
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 36px 20px 28px; text-align: center; margin-bottom: 16px;
@@ -132,7 +139,7 @@
     border-radius: 12px; font: inherit; font-size: 16px; font-weight: 700;
     cursor: pointer; border: 1px solid var(--ink);
   }
-  .btn.primary { background: var(--ink); color: #fff; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn.ghost { background: var(--card); color: var(--ink); }
   footer { padding: 0 20px 24px; color: var(--muted); font-size: 12px; text-align: center; }
 </style>
@@ -181,7 +188,7 @@
       </div>
       <div class="msg" id="result-msg"></div>
       <button class="btn primary" id="again-btn" style="margin-top:24px;">Play again</button>
-      <button class="btn ghost" id="change-btn">Change set</button>
+      <button class="btn ghost" id="change-btn">Home</button>
       <button class="btn ghost" id="share-btn">Share my score</button>
     </div>
   </section>
@@ -272,23 +279,27 @@ var DIFFICULTY = {
   "7": "hard", "8": "hard", "9": "hard", "10": "hard",
   "4": "hard", "23": "hard", "29": "hard"
 };
+// Only these sets are shown in the picker — 12 everyday sets instead of
+// all 25. The rest stay bundled in data/ so any of them can be added back.
+var FEATURED_SETS = ["1", "2", "19", "21", "3", "22", "12", "20", "13", "14", "7", "4"];
 function difficultyOf(s) { return DIFFICULTY[s.ID] || "medium"; }
 
 function renderSets() {
   var box = document.getElementById("sets");
   box.innerHTML = "";
+  var shown = sets.filter(function (s) { return FEATURED_SETS.indexOf(s.ID) !== -1; });
   [["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"]].forEach(function (tier) {
-    var list = sets.filter(function (s) { return difficultyOf(s) === tier[0]; });
+    var list = shown.filter(function (s) { return difficultyOf(s) === tier[0]; });
     if (!list.length) return;
     var label = document.createElement("div");
-    label.className = "section-label";
+    label.className = "section-label " + tier[0];
     label.textContent = tier[1];
     box.appendChild(label);
     var grid = document.createElement("div");
     grid.className = "sets";
     list.forEach(function (s, i) {
       var b = document.createElement("button");
-      b.className = "set-card";
+      b.className = "set-card tier-" + tier[0];
       b.style.animationDelay = (i * 30) + "ms";
       b.innerHTML = "<h2></h2><p></p><span class='count'></span> <span class='diff'></span>";
       b.querySelector("h2").textContent = s.SetName;
@@ -303,7 +314,7 @@ function renderSets() {
     box.appendChild(grid);
   });
   document.getElementById("sets-status").textContent =
-    sets.length + " sets · " + sets.reduce(function (n, s) { return n + (parseInt(s.cnt, 10) || 0); }, 0) + " words";
+    shown.length + " sets · " + shown.reduce(function (n, s) { return n + (parseInt(s.cnt, 10) || 0); }, 0) + " words";
 }
 
 function buildOptions(card, pool) {
