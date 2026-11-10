@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Artho Word Game</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --bg: #fafafa;
+    --card: #ffffff;
+    --green: #15803d;
+    --green-bg: #dcfce7;
+    --red: #b91c1c;
+    --red-bg: #fee2e2;
+    --accent: #111827;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  header {
+    width: 100%;
+    max-width: 560px;
+    padding: 28px 20px 8px;
+    text-align: center;
+  }
+  header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  header h1 span { font-weight: 400; color: var(--muted); }
+  header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  main { width: 100%; max-width: 560px; padding: 12px 20px 32px; flex: 1; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ---- set picker ---- */
+  .sets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .set-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 14px;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    transition: border-color .15s, transform .1s;
+  }
+  .set-card:active { transform: scale(0.98); }
+  .set-card:hover { border-color: var(--ink); }
+  .set-card h2 { font-size: 16px; font-weight: 700; }
+  .set-card p { color: var(--muted); font-size: 13px; margin-top: 4px; min-height: 32px; }
+  .set-card .count {
+    display: inline-block; margin-top: 8px;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px 9px;
+  }
+  .section-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 8px 2px 12px; }
+
+  /* ---- quiz ---- */
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 14px; font-weight: 600; margin-bottom: 10px;
+  }
+  .hud .streak { color: var(--muted); font-weight: 500; }
+  .progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 20px; }
+  .progress > div { height: 100%; background: var(--ink); width: 0%; transition: width .3s; }
+  .clue-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 36px 20px 28px; text-align: center; margin-bottom: 16px;
+  }
+  .clue-card .clue { font-size: 44px; font-weight: 700; line-height: 1.2; }
+  .clue-card .roman { color: var(--muted); font-size: 17px; margin-top: 8px; font-style: italic; }
+  .clue-card .prompt { color: var(--muted); font-size: 13px; margin-top: 18px; }
+  .options { display: grid; gap: 10px; }
+  .opt {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 15px 16px; font: inherit; font-size: 17px; text-align: left;
+    cursor: pointer; transition: border-color .15s, background .15s;
+    width: 100%;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--ink); }
+  .opt:disabled { cursor: default; opacity: .85; }
+  .opt.correct { background: var(--green-bg); border-color: var(--green); color: var(--green); font-weight: 700; }
+  .opt.wrong { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .quit {
+    display: block; margin: 18px auto 0; background: none; border: none;
+    font: inherit; font-size: 14px; color: var(--muted); cursor: pointer; text-decoration: underline;
+  }
+
+  /* ---- results ---- */
+  .result-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 32px 24px; text-align: center;
+  }
+  .result-card .big { font-size: 52px; font-weight: 800; letter-spacing: -0.02em; }
+  .result-card .of { color: var(--muted); font-size: 16px; margin-top: 2px; }
+  .result-card .stats { display: flex; justify-content: center; gap: 28px; margin-top: 20px; }
+  .result-card .stats div b { display: block; font-size: 22px; }
+  .result-card .stats div span { color: var(--muted); font-size: 13px; }
+  .result-card .msg { margin-top: 16px; font-size: 16px; }
+  .btn {
+    display: block; width: 100%; margin-top: 12px; padding: 15px;
+    border-radius: 12px; font: inherit; font-size: 16px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--ink);
+  }
+  .btn.primary { background: var(--ink); color: #fff; }
+  .btn.ghost { background: var(--card); color: var(--ink); }
+  footer { padding: 0 20px 24px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Artho <span>Word Game</span></h1>
+  <p>অসমীয়া clue, English answer — how many can you get right?</p>
+</header>
+
+<main>
+  <!-- SET PICKER -->
+  <section id="screen-sets" class="screen active">
+    <div class="section-label">Pick a word set</div>
+    <div id="sets" class="sets"></div>
+    <p id="sets-status" style="color:var(--muted);font-size:13px;margin-top:14px;"></p>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="screen-quiz" class="screen">
+    <div class="hud">
+      <span id="hud-q">Question 1 of 10</span>
+      <span>Score <b id="hud-score">0</b></span>
+      <span class="streak">🔥 <span id="hud-streak">0</span></span>
+    </div>
+    <div class="progress"><div id="progress-bar"></div></div>
+    <div class="clue-card">
+      <div class="clue" id="clue">—</div>
+      <div class="roman" id="roman"></div>
+      <div class="prompt">What does this mean in English?</div>
+    </div>
+    <div class="options" id="options"></div>
+    <button class="quit" id="quit-btn">Quit — back to sets</button>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="screen-result" class="screen">
+    <div class="result-card">
+      <div class="big" id="result-score">0 / 10</div>
+      <div class="of" id="result-set">Animals</div>
+      <div class="stats">
+        <div><b id="result-correct">0</b><span>correct</span></div>
+        <div><b id="result-acc">0%</b><span>accuracy</span></div>
+        <div><b id="result-best">0</b><span>best streak</span></div>
+      </div>
+      <div class="msg" id="result-msg"></div>
+      <button class="btn primary" id="again-btn" style="margin-top:24px;">Play again</button>
+      <button class="btn ghost" id="change-btn">Change set</button>
+    </div>
+  </section>
+</main>
+
+<footer>Words from XOBDO · Artho Word Game</footer>
+
+<script>
+"use strict";
+var QUESTIONS_PER_ROUND = 10;
+var API_BASE = "https://xobdo.org/api";
+
+var sets = null;        // [{ID, SetName, descrip, cnt}]
+var currentSet = null;  // set object being played
+var cards = [];         // valid cards of the current set
+var round = [];         // shuffled questions for this round
+var qIndex = 0, score = 0, streak = 0, bestStreak = 0, locked = false;
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
+  document.getElementById(id).classList.add("active");
+}
+
+function shuffle(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+function validCards(list) {
+  return (list || []).filter(function (c) {
+    return c && typeof c.clue === "string" && c.clue.trim() &&
+           typeof c.answer === "string" && c.answer.trim();
+  });
+}
+
+// Try the live XOBDO API first; fall back to the bundled JSON silently.
+function fetchJson(url, timeoutMs) {
+  return new Promise(function (resolve) {
+    var done = false;
+    var timer = setTimeout(function () { if (!done) { done = true; resolve(null); } }, timeoutMs || 8000);
+    fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.text();
+    }).then(function (text) {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      try { resolve(JSON.parse(text)); } catch (e) { resolve(null); }
+    }).catch(function () {
+      if (done) return;
+      done = true; clearTimeout(timer); resolve(null);
+    });
+  });
+}
+
+function loadSets() {
+  return fetchJson(API_BASE + "/wordgames.php").then(function (live) {
+    if (Array.isArray(live) && live.length) { sets = live; return "live"; }
+    return fetch("data/sets.json").then(function (r) { return r.json(); }).then(function (local) {
+      sets = local; return "bundled";
+    }).catch(function () { sets = []; return "none"; });
+  });
+}
+
+function loadCards(setId) {
+  return fetchJson(API_BASE + "/wordgames_cards.php?set=" + encodeURIComponent(setId)).then(function (live) {
+    var good = validCards(live);
+    if (good.length >= 4) { cards = good; return; }
+    return fetch("data/set-" + setId + ".json").then(function (r) { return r.json(); }).then(function (local) {
+      cards = validCards(local);
+    }).catch(function () { cards = []; });
+  });
+}
+
+function renderSets() {
+  var box = document.getElementById("sets");
+  box.innerHTML = "";
+  sets.forEach(function (s) {
+    var b = document.createElement("button");
+    b.className = "set-card";
+    b.innerHTML = "<h2></h2><p></p><span class='count'></span>";
+    b.querySelector("h2").textContent = s.SetName;
+    b.querySelector("p").textContent = s.descrip || "Word set";
+    b.querySelector(".count").textContent = s.cnt + " words";
+    b.addEventListener("click", function () { startRound(s); });
+    box.appendChild(b);
+  });
+  document.getElementById("sets-status").textContent =
+    sets.length + " sets · " + sets.reduce(function (n, s) { return n + (parseInt(s.cnt, 10) || 0); }, 0) + " words";
+}
+
+function buildOptions(card, pool) {
+  var answers = [];
+  var seen = {};
+  seen[String(card.answer).toLowerCase()] = true;
+  var others = shuffle(pool.filter(function (c) { return c !== card; }));
+  for (var i = 0; i < others.length && answers.length < 3; i++) {
+    var a = others[i].answer;
+    var k = String(a).toLowerCase();
+    if (!seen[k]) { seen[k] = true; answers.push(a); }
+  }
+  // Extremely small sets: pad with the correct answer's neighbours is not
+  // possible; fall back to reusing other answers if needed.
+  while (answers.length < 3) { answers.push("(no other word)"); }
+  answers.push(card.answer);
+  return shuffle(answers);
+}
+
+function startRound(setObj) {
+  currentSet = setObj;
+  document.getElementById("sets-status").textContent = "Loading " + setObj.SetName + "…";
+  loadCards(setObj.ID).then(function () {
+    if (cards.length < 4) {
+      document.getElementById("sets-status").textContent = "Could not load this set. Try another one.";
+      show("screen-sets");
+      return;
+    }
+    round = shuffle(cards.slice()).slice(0, QUESTIONS_PER_ROUND);
+    qIndex = 0; score = 0; streak = 0; bestStreak = 0;
+    show("screen-quiz");
+    renderQuestion();
+  });
+}
+
+function renderQuestion() {
+  locked = false;
+  var card = round[qIndex];
+  document.getElementById("hud-q").textContent = "Question " + (qIndex + 1) + " of " + round.length;
+  document.getElementById("hud-score").textContent = score;
+  document.getElementById("hud-streak").textContent = streak;
+  document.getElementById("progress-bar").style.width = ((qIndex) / round.length * 100) + "%";
+  document.getElementById("clue").textContent = card.clue;
+  document.getElementById("roman").textContent = card.clue_pRoman || "";
+  var box = document.getElementById("options");
+  box.innerHTML = "";
+  buildOptions(card, cards).forEach(function (ans) {
+    var b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = ans;
+    b.addEventListener("click", function () { answer(b, ans, card); });
+    box.appendChild(b);
+  });
+}
+
+function answer(btn, ans, card) {
+  if (locked) return;
+  locked = true;
+  var correct = String(ans).toLowerCase() === String(card.answer).toLowerCase();
+  document.querySelectorAll(".opt").forEach(function (o) {
+    o.disabled = true;
+    if (String(o.textContent).toLowerCase() === String(card.answer).toLowerCase()) o.classList.add("correct");
+  });
+  if (correct) {
+    score++; streak++;
+    if (streak > bestStreak) bestStreak = streak;
+  } else {
+    btn.classList.add("wrong");
+    streak = 0;
+  }
+  document.getElementById("hud-score").textContent = score;
+  document.getElementById("hud-streak").textContent = streak;
+  document.getElementById("progress-bar").style.width = (((qIndex + 1)) / round.length * 100) + "%";
+  setTimeout(function () {
+    qIndex++;
+    if (qIndex < round.length) renderQuestion();
+    else showResults();
+  }, 1100);
+}
+
+function showResults() {
+  document.getElementById("result-score").textContent = score + " / " + round.length;
+  document.getElementById("result-set").textContent = currentSet.SetName;
+  document.getElementById("result-correct").textContent = score;
+  document.getElementById("result-acc").textContent = Math.round(score / round.length * 100) + "%";
+  document.getElementById("result-best").textContent = bestStreak;
+  var frac = score / round.length;
+  document.getElementById("result-msg").textContent =
+    frac === 1 ? "Perfect! 🏆" :
+    frac >= 0.7 ? "Great job! Keep going." :
+    frac >= 0.4 ? "Good effort — try again!" :
+    "Keep practising, you'll get there!";
+  show("screen-result");
+}
+
+document.getElementById("quit-btn").addEventListener("click", function () { show("screen-sets"); });
+document.getElementById("again-btn").addEventListener("click", function () { startRound(currentSet); });
+document.getElementById("change-btn").addEventListener("click", function () { show("screen-sets"); });
+
+loadSets().then(function () {
+  if (sets && sets.length) renderSets();
+  else document.getElementById("sets-status").textContent = "Could not load word sets. Check your connection and reload.";
+});
+</script>
+</body>
+</html>
